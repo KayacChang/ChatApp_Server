@@ -46,7 +46,6 @@ func (room *Room) Start() {
 			}
 
 			delete(room.clients, client)
-			client.Close()
 
 			log.Printf("number of person: %d\n", len(room.clients))
 
@@ -66,11 +65,20 @@ func (room *Room) Broadcast(msg []byte) {
 
 // Add TODO
 func (room *Room) Add(client model.Client) {
-	log.Println("client connected...")
-
-	client.Start(room)
-
 	room.register <- client
+
+	client.Join(room)
+}
+
+// Has TODO
+func (room *Room) Has(target model.Client) bool {
+	for client := range room.clients {
+		if client == target {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Delete TODO

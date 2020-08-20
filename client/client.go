@@ -3,7 +3,9 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"log"
+	"server/event"
 	"server/model"
 	"time"
 
@@ -35,6 +37,7 @@ type Client struct {
 	cancel context.CancelFunc
 	conn   *websocket.Conn
 	send   chan []byte
+	room   model.Room
 }
 
 // New TODO
@@ -49,10 +52,15 @@ func New(conn *websocket.Conn) model.Client {
 	}
 }
 
-// Start TODO
-func (client *Client) Start(room model.Room) {
-	go client.read(room)
-	go client.write(room)
+// On TODO
+func (client *Client) On(listener model.Listener) {
+	go client.read(listener)
+	go client.write()
+}
+
+// Join TODO
+func (client *Client) Join(room model.Room) {
+	client.room = room
 }
 
 // Close TODO
@@ -60,8 +68,6 @@ func (client *Client) Close() {
 	client.cancel()
 
 	close(client.send)
-
-	client.conn.Close()
 }
 
 // Send TODO
@@ -69,8 +75,8 @@ func (client *Client) Send(msg []byte) {
 	client.send <- msg
 }
 
-func (client *Client) write(room model.Room) {
-	defer room.Delete(client)
+func (client *Client) read(listener model.Listener) {
+	defer client.Close()
 
 	setup(client.conn)
 
@@ -81,7 +87,7 @@ func (client *Client) write(room model.Room) {
 			return
 
 		default:
-			_, msg, err := client.conn.ReadMessage()
+			_, bytes, err := client.conn.ReadMessage()
 
 			if err != nil {
 				if isUnexpectedCloseError(err) {
@@ -91,12 +97,20 @@ func (client *Client) write(room model.Room) {
 				return
 			}
 
-			room.Broadcast(msg)
+			msg := event.Event{}
+
+			if err := json.Unmarshal(bytes, &msg); err != nil {
+				log.Printf("error: %v", err)
+
+				break
+			}
+
+			listener(msg)
 		}
 	}
 }
 
-func (client *Client) read(room model.Room) {
+func (client *Client) write() {
 	ticker := time.NewTicker(pingPeriod)
 
 	for {
@@ -126,7 +140,7 @@ func (client *Client) read(room model.Room) {
 		case <-ticker.C:
 			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
-			client.conn.WriteMessage(websocket.PingMessage, nil)
+			client.conn.WriteMessage(model.Ping, nil)
 		}
 	}
 }
