@@ -4,8 +4,11 @@ package event
 type Type string
 
 const (
+	// User TODO
+	User Type = "USER"
+
 	// Room TODO
-	Room Type = "ROOM"
+	Room = "ROOM"
 
 	// Msg TODO
 	Msg = "MSG"
@@ -24,13 +27,20 @@ const (
 	// Send TODO
 	Send = "SEND"
 
-	// Get TODO
-	Get = "GET"
+	// Receive TODO
+	Receive = "RECEIVE"
+
+	// Update TODO
+	Update = "UPDATE"
 )
+
+// Server TODO
+const Server = "SERVER"
 
 // Event TODO
 type Event struct {
 	Type    Type   `json:"type"`
 	Action  Action `json:"action"`
+	From    string `json:"from"`
 	Message string `json:"message"`
 }

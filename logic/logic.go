@@ -1,54 +1,70 @@
 package logic
 
 import (
-	"encoding/json"
-	"log"
+	"server/client"
 	"server/event"
-	"server/model"
 	"server/room"
 )
 
-var rooms map[string]model.Room
+// Client TODO
+type Client = *client.Client
 
-func init() {
-	room := room.New()
+// Clients TODO
+type Clients = []Client
 
-	go room.Start()
+// Room TODO
+type Room = *room.Room
 
-	rooms = map[string]model.Room{
-		"01": room,
+// Rooms TODO
+type Rooms = []Room
+
+// Logic TODO
+type Logic struct {
+	rooms   Rooms
+	clients Clients
+}
+
+// New TODO
+func New(rooms Rooms) *Logic {
+	return &Logic{
+		rooms:   rooms,
+		clients: Clients{},
 	}
 }
 
 // Handle TODO
-func Handle(client model.Client) {
+func (logic *Logic) Handle(client Client) {
 
 	client.On(func(evt event.Event) {
-		room := rooms["01"]
-
 		switch evt.Type {
+
+		case event.User:
+			if evt.Action == event.Join {
+				logic.onUserJoin(evt, client)
+			}
 
 		case event.Room:
 			if evt.Action == event.Join {
-				room.Add(client)
+				logic.onRoomJoin(evt, client)
 			}
 
 			if evt.Action == event.Leave {
-				room.Delete(client)
+				logic.onRoomLeave(evt, client)
 			}
 
 		case event.Msg:
-			if evt.Action == event.Send && room.Has(client) {
-
-				evt.Action = event.Get
-
-				bytes, err := json.Marshal(evt)
-				if err != nil {
-					log.Fatalf("error: %v", err)
-				}
-
-				room.Broadcast(bytes)
+			if evt.Action == event.Send {
+				logic.onUserSendMsg(evt, client)
 			}
 		}
 	})
+}
+
+func findRoomByID(rooms Rooms, id string) Room {
+	for _, room := range rooms {
+		if room.ID == id {
+			return room
+		}
+	}
+	return nil
 }

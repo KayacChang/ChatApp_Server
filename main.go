@@ -1,14 +1,17 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"server/client"
 	"server/logic"
+	"server/room"
 
 	"github.com/gorilla/websocket"
 )
+
+// Room TODO
+type Room = logic.Room
 
 func main() {
 	upgrader := websocket.Upgrader{
@@ -16,10 +19,8 @@ func main() {
 		WriteBufferSize: 1024,
 	}
 
-	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-
-		fmt.Fprintln(w, "Login")
+	handler := logic.New([]Room{
+		room.New("01", "Test"),
 	})
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -30,10 +31,18 @@ func main() {
 			return
 		}
 
-		logic.Handle(client.New(conn))
-		log.Println("client connected...")
+		handler.Handle(client.New(conn))
+		log.Printf("new connection from %v\n", getIP(r))
 	})
 
 	log.Printf("server listen on port %d", 8080)
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func getIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-FORWARDED-FOR")
+	if forwarded != "" {
+		return forwarded
+	}
+	return r.RemoteAddr
 }

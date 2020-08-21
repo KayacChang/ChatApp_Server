@@ -31,19 +31,23 @@ var (
 	space   = []byte{' '}
 )
 
+// Listener TODO
+type Listener = func(evt event.Event)
+
 // Client TODO
 type Client struct {
+	ID     string `json:"id"`
+	RoomID string `json:"-"`
+
 	ctx    context.Context
 	cancel context.CancelFunc
 	conn   *websocket.Conn
 	send   chan []byte
-	room   model.Room
 }
 
 // New TODO
-func New(conn *websocket.Conn) model.Client {
+func New(conn *websocket.Conn) *Client {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	return &Client{
 		ctx:    ctx,
 		cancel: cancel,
@@ -53,21 +57,17 @@ func New(conn *websocket.Conn) model.Client {
 }
 
 // On TODO
-func (client *Client) On(listener model.Listener) {
+func (client *Client) On(listener Listener) {
 	go client.read(listener)
 	go client.write()
-}
 
-// Join TODO
-func (client *Client) Join(room model.Room) {
-	client.room = room
 }
 
 // Close TODO
 func (client *Client) Close() {
 	client.cancel()
-
 	close(client.send)
+	log.Printf("client id: %v connection close...\n", client.ID)
 }
 
 // Send TODO
@@ -75,7 +75,7 @@ func (client *Client) Send(msg []byte) {
 	client.send <- msg
 }
 
-func (client *Client) read(listener model.Listener) {
+func (client *Client) read(listener Listener) {
 	defer client.Close()
 
 	setup(client.conn)
@@ -93,7 +93,6 @@ func (client *Client) read(listener model.Listener) {
 				if isUnexpectedCloseError(err) {
 					log.Printf("error: %v", err)
 				}
-
 				return
 			}
 
@@ -101,7 +100,6 @@ func (client *Client) read(listener model.Listener) {
 
 			if err := json.Unmarshal(bytes, &msg); err != nil {
 				log.Printf("error: %v", err)
-
 				break
 			}
 
@@ -118,7 +116,6 @@ func (client *Client) write() {
 
 		case <-client.ctx.Done():
 			ticker.Stop()
-
 			return
 
 		case msg, ok := <-client.send:
@@ -126,7 +123,6 @@ func (client *Client) write() {
 
 			if !ok {
 				client.conn.WriteMessage(model.Close, []byte{})
-
 				return
 			}
 
@@ -139,7 +135,6 @@ func (client *Client) write() {
 
 		case <-ticker.C:
 			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
-
 			client.conn.WriteMessage(model.Ping, nil)
 		}
 	}

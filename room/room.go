@@ -2,32 +2,56 @@ package room
 
 import (
 	"log"
-	"server/model"
+	"server/client"
+	"server/utils"
 )
+
+// Client TODO
+type Client = *client.Client
+
+// Clients TODO
+type Clients = map[Client]bool
+
+// ClientChannel TODO
+type ClientChannel = chan Client
 
 // Room TODO
 type Room struct {
+	ID string `json:"id"`
+
+	Title string `json:"title"`
+
+	Clients []string `json:"clients"`
+
 	// Registered clients
-	clients model.Clients
+	clients Clients
 
 	// Inbound messages from clients
 	broadcast chan []byte
 
 	// Register requests from clients
-	register chan model.Client
+	register ClientChannel
 
 	// Unregister requests from clients
-	unregister chan model.Client
+	unregister ClientChannel
 }
 
 // New TODO
-func New() model.Room {
-	return &Room{
-		clients:    model.Clients{},
+func New(ID string, Title string) *Room {
+	room := &Room{
+		ID:      ID,
+		Title:   Title,
+		Clients: []string{},
+
+		clients:    Clients{},
 		broadcast:  make(chan []byte),
-		register:   make(chan model.Client),
-		unregister: make(chan model.Client),
+		register:   make(ClientChannel),
+		unregister: make(ClientChannel),
 	}
+
+	go room.Start()
+
+	return room
 }
 
 // Start TODO
@@ -36,18 +60,18 @@ func (room *Room) Start() {
 		select {
 
 		case client := <-room.register:
-			room.clients[client] = true
+			room.addClient(client)
 
-			log.Printf("number of person: %d\n", len(room.clients))
+			log.Printf("client %v join room %v ", client.ID, room.ID)
 
 		case client := <-room.unregister:
 			if !room.clients[client] {
 				return
 			}
 
-			delete(room.clients, client)
+			room.removeClient(client)
 
-			log.Printf("number of person: %d\n", len(room.clients))
+			log.Printf("client %v leave room %v ", client.ID, room.ID)
 
 		case msg := <-room.broadcast:
 
@@ -63,25 +87,29 @@ func (room *Room) Broadcast(msg []byte) {
 	room.broadcast <- msg
 }
 
-// Add TODO
-func (room *Room) Add(client model.Client) {
-	room.register <- client
+// Join TODO
+func (room *Room) Join() ClientChannel {
+	return room.register
+}
 
-	client.Join(room)
+// Leave TODO
+func (room *Room) Leave() ClientChannel {
+	return room.unregister
 }
 
 // Has TODO
-func (room *Room) Has(target model.Client) bool {
-	for client := range room.clients {
-		if client == target {
-			return true
-		}
-	}
-
-	return false
+func (room *Room) Has(target Client) bool {
+	return room.clients[target]
 }
 
-// Delete TODO
-func (room *Room) Delete(client model.Client) {
-	room.unregister <- client
+func (room *Room) addClient(client Client) {
+	room.clients[client] = true
+	room.Clients = append(room.Clients, client.ID)
+	client.RoomID = room.ID
+}
+
+func (room *Room) removeClient(client Client) {
+	delete(room.clients, client)
+	room.Clients = utils.Remove(room.Clients, client.ID)
+	client.RoomID = ""
 }
