@@ -1,8 +1,6 @@
 package logic
 
 import (
-	"encoding/json"
-	"log"
 	"server/client"
 	"server/event"
 	"server/room"
@@ -12,7 +10,7 @@ import (
 type Client = *client.Client
 
 // Clients TODO
-type Clients = []Client
+type Clients []Client
 
 // Room TODO
 type Room = *room.Room
@@ -27,105 +25,74 @@ type Logic struct {
 }
 
 // New TODO
-func New(rooms Rooms) *Logic {
-	return &Logic{
-		rooms:   rooms,
-		clients: Clients{},
+func New() *Logic {
+	it := &Logic{
+		rooms: []Room{
+			room.New("01", "Test"),
+		},
+		clients: []Client{},
 	}
+
+	for _, room := range it.rooms {
+		go room.On(it)
+	}
+
+	return it
 }
 
 // Handle TODO
 func (logic *Logic) Handle(client Client) {
-
-	client.On(func(evt event.Event) {
-		switch evt.Type {
-
-		case event.User:
-			if evt.Action == event.Join {
-				logic.onUserJoin(evt, client)
-			}
-
-		case event.Room:
-			if evt.Action == event.Join {
-				logic.onRoomJoin(evt, client)
-			}
-
-			if evt.Action == event.Leave {
-				logic.onRoomLeave(evt, client)
-			}
-
-		case event.Msg:
-			if evt.Action == event.Send {
-				logic.onUserSendMsg(evt, client)
-			}
-		}
-	}, func() {
-		logic.clients = remove(logic.clients, client)
-
-		room := findRoomByID(logic.rooms, client.RoomID)
-		if room != nil {
-			room.Leave() <- client
-		}
-	})
+	client.On(logic)
 }
 
-func remove(clients Clients, target Client) Clients {
-	res := Clients{}
+// OnChange TODO
+func (logic *Logic) OnChange(room Room) {
+	broadcastRoomStatus(logic.clients, logic.rooms)
+}
 
-	for _, client := range clients {
-		if client != target {
-			res = append(res, client)
+// OnMsg TODO
+func (logic *Logic) OnMsg(room Room, msg []byte) {
+
+	for _, id := range room.Clients {
+		client := findClientByID(logic.clients, id)
+
+		if client != nil {
+			client.Send(msg)
 		}
 	}
-
-	return res
 }
 
-// InitRoomStatusBroadcast TODO
-func (logic *Logic) InitRoomStatusBroadcast() {
-	for _, room := range logic.rooms {
-		go room.Start(func(room Room) {
-			broadcastRoomStatus(logic.clients, logic.rooms)
-		})
-	}
-}
+// OnEvent TODO
+func (logic *Logic) OnEvent(evt event.Event, client Client) {
+	switch evt.Type {
 
-func toRoomStatusData(rooms Rooms) *[]byte {
-	data, err := json.Marshal(event.Event{
-		Type:    event.Room,
-		Action:  event.Update,
-		From:    event.Server,
-		Message: rooms,
-	})
-	if err != nil {
-		log.Printf("error: %v", err)
+	case event.User:
+		if evt.Action == event.Join {
+			logic.onUserJoin(evt, client)
+		}
 
-		return nil
-	}
+	case event.Room:
+		if evt.Action == event.Join {
+			logic.onRoomJoin(evt, client)
+		}
 
-	return &data
-}
+		if evt.Action == event.Leave {
+			logic.onRoomLeave(evt, client)
+		}
 
-func broadcastRoomStatus(clients Clients, rooms Rooms) {
-	data := toRoomStatusData(rooms)
-	if data == nil {
-		return
-	}
-
-	broadcast(clients, *data)
-}
-
-func broadcast(clients Clients, msg []byte) {
-	for _, client := range clients {
-		client.Send(msg)
-	}
-}
-
-func findRoomByID(rooms Rooms, id string) Room {
-	for _, room := range rooms {
-		if room.ID == id {
-			return room
+	case event.Msg:
+		if evt.Action == event.Send {
+			logic.onUserSendMsg(evt, client)
 		}
 	}
-	return nil
+}
+
+// OnClose TODO
+func (logic *Logic) OnClose(client Client) {
+	logic.clients = logic.clients.remove(client)
+
+	room := findRoomByID(logic.rooms, client.RoomID)
+	if room != nil {
+		room.Leave(client.ID)
+	}
 }

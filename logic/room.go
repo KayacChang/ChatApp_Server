@@ -15,7 +15,8 @@ func (logic *Logic) onRoomJoin(evt event.Event, client Client) {
 		return
 	}
 
-	room.Join() <- client
+	room.Join(client.ID)
+	client.RoomID = room.ID
 
 	data, err := json.Marshal(event.Event{
 		Type:    event.Room,
@@ -40,7 +41,8 @@ func (logic *Logic) onRoomLeave(evt event.Event, client Client) {
 		return
 	}
 
-	room.Leave() <- client
+	room.Leave(client.ID)
+	client.RoomID = ""
 
 	data, err := json.Marshal(event.Event{
 		Type:    event.Room,

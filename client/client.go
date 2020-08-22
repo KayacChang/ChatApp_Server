@@ -31,11 +31,11 @@ var (
 	space   = []byte{' '}
 )
 
-// EventHandler TODO
-type EventHandler = func(evt event.Event)
-
-// CloseHandler TODO
-type CloseHandler = func()
+// Handler TODO
+type Handler interface {
+	OnEvent(evt event.Event, client *Client)
+	OnClose(client *Client)
+}
 
 // Client TODO
 type Client struct {
@@ -60,10 +60,9 @@ func New(conn *websocket.Conn) *Client {
 }
 
 // On TODO
-func (client *Client) On(onEvent EventHandler, onClose CloseHandler) {
-	go client.read(onEvent, onClose)
+func (client *Client) On(handler Handler) {
+	go client.read(handler)
 	go client.write()
-
 }
 
 // Close TODO
@@ -78,7 +77,7 @@ func (client *Client) Send(msg []byte) {
 	client.send <- msg
 }
 
-func (client *Client) read(onEvent EventHandler, onClose CloseHandler) {
+func (client *Client) read(handler Handler) {
 	defer client.Close()
 
 	setup(client.conn)
@@ -87,7 +86,7 @@ func (client *Client) read(onEvent EventHandler, onClose CloseHandler) {
 		select {
 
 		case <-client.ctx.Done():
-			onClose()
+			handler.OnClose(client)
 
 			return
 
@@ -99,19 +98,19 @@ func (client *Client) read(onEvent EventHandler, onClose CloseHandler) {
 					log.Printf("error: %v", err)
 				}
 
-				onClose()
+				handler.OnClose(client)
 
 				return
 			}
 
-			msg := event.Event{}
+			evt := event.Event{}
 
-			if err := json.Unmarshal(bytes, &msg); err != nil {
+			if err := json.Unmarshal(bytes, &evt); err != nil {
 				log.Printf("error: %v", err)
 				break
 			}
 
-			onEvent(msg)
+			handler.OnEvent(evt, client)
 		}
 	}
 }

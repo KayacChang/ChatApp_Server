@@ -5,13 +5,9 @@ import (
 	"net/http"
 	"server/client"
 	"server/logic"
-	"server/room"
 
 	"github.com/gorilla/websocket"
 )
-
-// Room TODO
-type Room = logic.Room
 
 func main() {
 	upgrader := websocket.Upgrader{
@@ -19,11 +15,7 @@ func main() {
 		WriteBufferSize: 1024,
 	}
 
-	handler := logic.New([]Room{
-		room.New("01", "Test"),
-	})
-
-	handler.InitRoomStatusBroadcast()
+	handler := logic.New()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
