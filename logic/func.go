@@ -65,3 +65,11 @@ func (clients Clients) remove(target Client) Clients {
 	}
 	return res
 }
+
+func (logic *Logic) sendByClientID(id string, msg []byte) {
+	client := findClientByID(logic.clients, id)
+
+	if client != nil {
+		client.Send(msg)
+	}
+}

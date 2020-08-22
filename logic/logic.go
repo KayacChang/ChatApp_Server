@@ -52,13 +52,8 @@ func (logic *Logic) OnChange(room Room) {
 
 // OnMsg TODO
 func (logic *Logic) OnMsg(room Room, msg []byte) {
-
 	for _, id := range room.Clients {
-		client := findClientByID(logic.clients, id)
-
-		if client != nil {
-			client.Send(msg)
-		}
+		go logic.sendByClientID(id, msg)
 	}
 }
 
