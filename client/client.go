@@ -17,7 +17,7 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 1 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
@@ -142,7 +142,7 @@ func (client *Client) write() {
 
 		case <-ticker.C:
 			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			client.conn.WriteMessage(model.Ping, nil)
+			client.conn.WriteMessage(model.Ping, []byte("pong"))
 		}
 	}
 }
@@ -152,7 +152,7 @@ func setup(client *websocket.Conn) {
 
 	client.SetReadDeadline(time.Now().Add(pongWait))
 
-	client.SetPongHandler(func(string) error {
+	client.SetPongHandler(func(s string) error {
 		return client.SetReadDeadline(time.Now().Add(pongWait))
 	})
 }
