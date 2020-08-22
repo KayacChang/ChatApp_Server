@@ -24,6 +24,8 @@ func (logic *Logic) onUserJoin(evt event.Event, client Client) {
 	}
 
 	client.Send(data)
+
+	broadcastRoomStatus(Clients{client}, logic.rooms)
 }
 
 func (logic *Logic) onUserSendMsg(evt event.Event, client Client) {
@@ -34,20 +36,24 @@ func (logic *Logic) onUserSendMsg(evt event.Event, client Client) {
 		return
 	}
 
-	if room != nil && room.Has(client) {
-		bytes, err := json.Marshal(event.Event{
-			Type:    event.Msg,
-			Action:  event.Receive,
-			From:    evt.From,
-			Message: evt.Message,
-		})
+	if !room.Has(client) {
+		log.Printf("can not find client %v in room id %v", client.ID, client.RoomID)
 
-		if err != nil {
-			log.Printf("error: %v", err)
-
-			return
-		}
-
-		room.Broadcast(bytes)
+		return
 	}
+
+	bytes, err := json.Marshal(event.Event{
+		Type:    event.Msg,
+		Action:  event.Receive,
+		From:    evt.From,
+		Message: evt.Message,
+	})
+
+	if err != nil {
+		log.Printf("error: %v", err)
+
+		return
+	}
+
+	room.Broadcast(bytes)
 }

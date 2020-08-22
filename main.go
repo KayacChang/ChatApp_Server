@@ -23,6 +23,8 @@ func main() {
 		room.New("01", "Test"),
 	})
 
+	handler.InitRoomStatusBroadcast()
+
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

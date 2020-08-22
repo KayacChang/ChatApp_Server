@@ -31,8 +31,11 @@ var (
 	space   = []byte{' '}
 )
 
-// Listener TODO
-type Listener = func(evt event.Event)
+// EventHandler TODO
+type EventHandler = func(evt event.Event)
+
+// CloseHandler TODO
+type CloseHandler = func()
 
 // Client TODO
 type Client struct {
@@ -57,8 +60,8 @@ func New(conn *websocket.Conn) *Client {
 }
 
 // On TODO
-func (client *Client) On(listener Listener) {
-	go client.read(listener)
+func (client *Client) On(onEvent EventHandler, onClose CloseHandler) {
+	go client.read(onEvent, onClose)
 	go client.write()
 
 }
@@ -75,7 +78,7 @@ func (client *Client) Send(msg []byte) {
 	client.send <- msg
 }
 
-func (client *Client) read(listener Listener) {
+func (client *Client) read(onEvent EventHandler, onClose CloseHandler) {
 	defer client.Close()
 
 	setup(client.conn)
@@ -84,6 +87,8 @@ func (client *Client) read(listener Listener) {
 		select {
 
 		case <-client.ctx.Done():
+			onClose()
+
 			return
 
 		default:
@@ -93,6 +98,9 @@ func (client *Client) read(listener Listener) {
 				if isUnexpectedCloseError(err) {
 					log.Printf("error: %v", err)
 				}
+
+				onClose()
+
 				return
 			}
 
@@ -103,7 +111,7 @@ func (client *Client) read(listener Listener) {
 				break
 			}
 
-			listener(msg)
+			onEvent(msg)
 		}
 	}
 }

@@ -2,12 +2,13 @@ package logic
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"server/event"
 )
 
 func (logic *Logic) onRoomJoin(evt event.Event, client Client) {
-	room := findRoomByID(logic.rooms, evt.Message)
+	room := findRoomByID(logic.rooms, fmt.Sprintf("%v", evt.Message))
 	if room == nil {
 		log.Printf("can not find room by id: %v", evt.Message)
 
@@ -15,6 +16,7 @@ func (logic *Logic) onRoomJoin(evt event.Event, client Client) {
 	}
 
 	room.Join() <- client
+
 	data, err := json.Marshal(event.Event{
 		Type:    event.Room,
 		Action:  event.Join,
@@ -39,6 +41,7 @@ func (logic *Logic) onRoomLeave(evt event.Event, client Client) {
 	}
 
 	room.Leave() <- client
+
 	data, err := json.Marshal(event.Event{
 		Type:    event.Room,
 		Action:  event.Leave,

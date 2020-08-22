@@ -38,7 +38,7 @@ type Room struct {
 
 // New TODO
 func New(ID string, Title string) *Room {
-	room := &Room{
+	return &Room{
 		ID:      ID,
 		Title:   Title,
 		Clients: []string{},
@@ -48,14 +48,10 @@ func New(ID string, Title string) *Room {
 		register:   make(ClientChannel),
 		unregister: make(ClientChannel),
 	}
-
-	go room.Start()
-
-	return room
 }
 
 // Start TODO
-func (room *Room) Start() {
+func (room *Room) Start(onChange func(room *Room)) {
 	for {
 		select {
 
@@ -63,6 +59,8 @@ func (room *Room) Start() {
 			room.addClient(client)
 
 			log.Printf("client %v join room %v ", client.ID, room.ID)
+
+			onChange(room)
 
 		case client := <-room.unregister:
 			if !room.clients[client] {
@@ -72,6 +70,8 @@ func (room *Room) Start() {
 			room.removeClient(client)
 
 			log.Printf("client %v leave room %v ", client.ID, room.ID)
+
+			onChange(room)
 
 		case msg := <-room.broadcast:
 

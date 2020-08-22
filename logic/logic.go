@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"encoding/json"
+	"log"
 	"server/client"
 	"server/event"
 	"server/room"
@@ -57,7 +59,66 @@ func (logic *Logic) Handle(client Client) {
 				logic.onUserSendMsg(evt, client)
 			}
 		}
+	}, func() {
+		logic.clients = remove(logic.clients, client)
+
+		room := findRoomByID(logic.rooms, client.RoomID)
+		if room != nil {
+			room.Leave() <- client
+		}
 	})
+}
+
+func remove(clients Clients, target Client) Clients {
+	res := Clients{}
+
+	for _, client := range clients {
+		if client != target {
+			res = append(res, client)
+		}
+	}
+
+	return res
+}
+
+// InitRoomStatusBroadcast TODO
+func (logic *Logic) InitRoomStatusBroadcast() {
+	for _, room := range logic.rooms {
+		go room.Start(func(room Room) {
+			broadcastRoomStatus(logic.clients, logic.rooms)
+		})
+	}
+}
+
+func toRoomStatusData(rooms Rooms) *[]byte {
+	data, err := json.Marshal(event.Event{
+		Type:    event.Room,
+		Action:  event.Update,
+		From:    event.Server,
+		Message: rooms,
+	})
+	if err != nil {
+		log.Printf("error: %v", err)
+
+		return nil
+	}
+
+	return &data
+}
+
+func broadcastRoomStatus(clients Clients, rooms Rooms) {
+	data := toRoomStatusData(rooms)
+	if data == nil {
+		return
+	}
+
+	broadcast(clients, *data)
+}
+
+func broadcast(clients Clients, msg []byte) {
+	for _, client := range clients {
+		client.Send(msg)
+	}
 }
 
 func findRoomByID(rooms Rooms, id string) Room {

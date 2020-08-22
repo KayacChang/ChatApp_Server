@@ -39,8 +39,8 @@ const Server = "SERVER"
 
 // Event TODO
 type Event struct {
-	Type    Type   `json:"type"`
-	Action  Action `json:"action"`
-	From    string `json:"from"`
-	Message string `json:"message"`
+	Type    Type        `json:"type"`
+	Action  Action      `json:"action"`
+	From    string      `json:"from"`
+	Message interface{} `json:"message"`
 }
