@@ -36,7 +36,7 @@ func (logic *Logic) onUserSendMsg(evt event.Event, client Client) {
 		return
 	}
 
-	if !room.Has(client.ID) {
+	if !room.Has(client) {
 		log.Printf("can not find client %v in room id %v", client.ID, client.RoomID)
 
 		return

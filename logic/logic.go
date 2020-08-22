@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"fmt"
+	"log"
 	"server/client"
 	"server/event"
 	"server/room"
@@ -45,16 +47,9 @@ func (logic *Logic) Handle(client Client) {
 	client.On(logic)
 }
 
-// OnChange TODO
-func (logic *Logic) OnChange(room Room) {
+// OnRoomChange TODO
+func (logic *Logic) OnRoomChange(room Room) {
 	broadcastRoomStatus(logic.clients, logic.rooms)
-}
-
-// OnMsg TODO
-func (logic *Logic) OnMsg(room Room, msg []byte) {
-	for _, id := range room.Clients {
-		go logic.sendByClientID(id, msg)
-	}
 }
 
 // OnEvent TODO
@@ -68,11 +63,25 @@ func (logic *Logic) OnEvent(evt event.Event, client Client) {
 
 	case event.Room:
 		if evt.Action == event.Join {
-			logic.onRoomJoin(evt, client)
+			room := findRoomByID(logic.rooms, fmt.Sprintf("%v", evt.Message))
+			if room == nil {
+				log.Printf("can not find room by id: %v", evt.Message)
+
+				return
+			}
+
+			room.Join(client)
 		}
 
 		if evt.Action == event.Leave {
-			logic.onRoomLeave(evt, client)
+			room := findRoomByID(logic.rooms, client.RoomID)
+			if room == nil {
+				log.Printf("can not find room by id: %v", client.RoomID)
+
+				return
+			}
+
+			room.Leave(client)
 		}
 
 	case event.Msg:
@@ -88,6 +97,6 @@ func (logic *Logic) OnClose(client Client) {
 
 	room := findRoomByID(logic.rooms, client.RoomID)
 	if room != nil {
-		room.Leave(client.ID)
+		room.Leave(client)
 	}
 }

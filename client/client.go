@@ -41,6 +41,7 @@ type Handler interface {
 type Client struct {
 	ID     string `json:"id"`
 	RoomID string `json:"-"`
+	Closed bool   `json:"-"`
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -69,6 +70,7 @@ func (client *Client) On(handler Handler) {
 func (client *Client) Close() {
 	client.cancel()
 	close(client.send)
+	client.Closed = true
 	log.Printf("client id: %v connection close...\n", client.ID)
 }
 

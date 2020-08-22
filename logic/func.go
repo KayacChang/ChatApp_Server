@@ -46,15 +46,6 @@ func findRoomByID(rooms Rooms, id string) Room {
 	return nil
 }
 
-func findClientByID(clients Clients, id string) Client {
-	for _, client := range clients {
-		if client.ID == id {
-			return client
-		}
-	}
-	return nil
-}
-
 func (clients Clients) remove(target Client) Clients {
 	res := Clients{}
 
@@ -64,12 +55,4 @@ func (clients Clients) remove(target Client) Clients {
 		}
 	}
 	return res
-}
-
-func (logic *Logic) sendByClientID(id string, msg []byte) {
-	client := findClientByID(logic.clients, id)
-
-	if client != nil {
-		client.Send(msg)
-	}
 }
