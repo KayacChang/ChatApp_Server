@@ -61,6 +61,10 @@ func (logic *Logic) OnEvent(evt event.Event, client Client) {
 			logic.onUserJoin(evt, client)
 		}
 
+		if evt.Action == event.Leave {
+			logic.onUserLeave(evt, client)
+		}
+
 	case event.Room:
 		if evt.Action == event.Join {
 			room := findRoomByID(logic.rooms, fmt.Sprintf("%v", evt.Message))

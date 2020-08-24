@@ -28,6 +28,24 @@ func (logic *Logic) onUserJoin(evt event.Event, client Client) {
 	broadcastRoomStatus(Clients{client}, logic.rooms)
 }
 
+func (logic *Logic) onUserLeave(evt event.Event, client Client) {
+	logic.OnClose(client)
+
+	data, err := json.Marshal(event.Event{
+		Type:    event.User,
+		Action:  event.Leave,
+		From:    event.Server,
+		Message: "User Leave Success",
+	})
+
+	if err != nil {
+		log.Printf("error: %v", err)
+		return
+	}
+
+	client.Send(data)
+}
+
 func (logic *Logic) onUserSendMsg(evt event.Event, client Client) {
 	room := findRoomByID(logic.rooms, client.RoomID)
 	if room == nil {
