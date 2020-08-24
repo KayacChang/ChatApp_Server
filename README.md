@@ -6,8 +6,8 @@
 {
     "type": "<TYPE>",
     "action": "<ACTION>",
-    "from": "<FROM>",
-    "message": "<MSG>"
+    "status": "OK" | "ERROR",
+    "data": "<DATA>"
 }
 ```
 
@@ -22,7 +22,9 @@
 {
     "type": "USER",
     "action": "JOIN",
-    "from": "<User ID>"
+    "data": { 
+        "username": "<USER_NAME>"
+    }
 }
 ```
 
@@ -31,8 +33,34 @@
 {
     "type": "USER",
     "action": "JOIN",
-    "from": "SERVER",
-    "message": "User Join Success"
+    "status": "OK",
+    "data": {
+        "username": "<USER_NAME>",
+        "message": "User Join Success"
+    }
+}
+```
+
+#### Leave
+
+##### Request
+```json
+{
+    "type": "USER",
+    "action": "LEAVE",
+}
+```
+
+##### Response
+```json
+{
+    "type": "USER",
+    "action": "LEAVE",
+    "status": "OK",
+    "data": {
+        "username": "<USER_NAME>",
+        "message":"User Leave Success"
+    }
 }
 ```
 
@@ -45,8 +73,9 @@
 {
     "type": "ROOM",
     "action": "JOIN",
-    "from": "<User ID>",
-    "message": "<Room ID>"
+    "data": {
+        "room_id": "<ROOM_ID>"
+    }
 }
 ```
 
@@ -55,8 +84,11 @@
 {
     "type": "ROOM",
     "action": "JOIN",
-    "from": "SERVER",
-    "message": "Room Join Success"
+    "status": "OK",
+    "data": {
+        "room_id": "<ROOM_ID>",
+        "message": "Room Leave Success"
+    }
 }
 ```
 
@@ -67,7 +99,6 @@
 {
     "type": "ROOM",
     "action": "LEAVE",
-    "from": "<User ID>"
 }
 ```
 
@@ -76,8 +107,11 @@
 {
     "type": "ROOM",
     "action": "LEAVE",
-    "from": "SERVER",
-    "message": "Room Leave Success"
+    "status": "OK",
+    "data": {
+        "room_id": "<ROOM_ID>",
+        "message":"Room Leave Success"
+    }
 }
 ```
 
@@ -89,8 +123,10 @@
 {
     "type": "MSG",
     "action": "SEND",
-    "from": "<User ID>",
-    "message": "<MSG>"
+    "data": {
+        "from": "<USER_NAME>",
+        "message": "<MSG>"
+    }
 }
 ```
 
@@ -100,7 +136,12 @@
 {
     "type": "MSG",
     "action": "RECEIVE",
-    "from": "<User ID>",
-    "message": "<MSG>"
+    "status": "OK",
+    "data": {
+        "id": "<UUID>",
+        "name": "<USER_NAME>",
+        "message": "<MSG>",
+        "time": "<TIME_STRING>"
+    }
 }
 ```
