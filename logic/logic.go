@@ -1,7 +1,6 @@
 package logic
 
 import (
-	"fmt"
 	"log"
 	"server/client"
 	"server/event"
@@ -25,6 +24,9 @@ type Logic struct {
 	rooms   Rooms
 	clients Clients
 }
+
+// Msg TODO
+type Msg = room.Msg
 
 // New TODO
 func New() *Logic {
@@ -57,19 +59,42 @@ func (logic *Logic) OnEvent(evt event.Event, client Client) {
 	switch evt.Type {
 
 	case event.User:
+
 		if evt.Action == event.Join {
-			logic.onUserJoin(evt, client)
+			data, ok := evt.Data.(map[string]interface{})
+			if !ok {
+				log.Printf("can not handle this data: %v\n", evt.Data)
+
+				return
+			}
+
+			user := userReq{
+				Name: data["username"].(string),
+			}
+			logic.onUserJoin(user, client)
 		}
 
 		if evt.Action == event.Leave {
-			logic.onUserLeave(evt, client)
+			logic.onUserLeave(client)
 		}
 
 	case event.Room:
+
 		if evt.Action == event.Join {
-			room := findRoomByID(logic.rooms, fmt.Sprintf("%v", evt.Message))
+			data, ok := evt.Data.(map[string]interface{})
+			if !ok {
+				log.Printf("can not handle this data: %v\n", evt.Data)
+
+				return
+			}
+
+			req := roomReq{
+				RoomID: data["room_id"].(string),
+			}
+
+			room := findRoomByID(logic.rooms, req.RoomID)
 			if room == nil {
-				log.Printf("can not find room by id: %v", evt.Message)
+				log.Printf("can not find room by id: %v", req.RoomID)
 
 				return
 			}
@@ -89,8 +114,20 @@ func (logic *Logic) OnEvent(evt event.Event, client Client) {
 		}
 
 	case event.Msg:
+		data, ok := evt.Data.(map[string]interface{})
+		if !ok {
+			log.Printf("can not handle this data: %v\n", evt.Data)
+
+			return
+		}
+
+		msg := msgReq{
+			From:    data["from"].(string),
+			Message: data["message"].(string),
+		}
+
 		if evt.Action == event.Send {
-			logic.onUserSendMsg(evt, client)
+			logic.onUserSendMsg(msg, client)
 		}
 	}
 }

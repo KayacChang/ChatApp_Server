@@ -1,9 +1,12 @@
 package room
 
 import (
+	"encoding/json"
 	"log"
 	"server/client"
+	"server/event"
 	"server/utils"
+	"time"
 )
 
 // Client TODO
@@ -19,7 +22,12 @@ type ClientID = string
 type ClientChannel = chan Client
 
 // Msg TODO
-type Msg = []byte
+type Msg struct {
+	ID      string    `json:"id"`
+	Name    string    `json:"name"`
+	Message string    `json:"message"`
+	Time    time.Time `json:"time"`
+}
 
 // Room TODO
 type Room struct {
@@ -28,6 +36,8 @@ type Room struct {
 	Title string `json:"title"`
 
 	Clients []ClientID `json:"clients"`
+
+	history []Msg
 
 	clients Clients
 
@@ -48,6 +58,7 @@ func New(ID string, Title string) *Room {
 		Title:   Title,
 		Clients: []ClientID{},
 
+		history:    []Msg{},
 		clients:    Clients{},
 		broadcast:  make(chan Msg),
 		register:   make(ClientChannel),
@@ -67,9 +78,11 @@ func (room *Room) On(handler Handler) {
 	for {
 		select {
 		case client := <-room.register:
+
 			if room.Has(client) {
 				return
 			}
+
 			room.addClient(client)
 			log.Printf("client %v join room %v ", client.ID, room.ID)
 
@@ -77,6 +90,7 @@ func (room *Room) On(handler Handler) {
 			handler.OnRoomChange(room)
 
 		case client := <-room.unregister:
+
 			if !room.Has(client) {
 				return
 			}
@@ -87,11 +101,27 @@ func (room *Room) On(handler Handler) {
 			if !client.Closed {
 				handler.OnRoomLeave(room, client)
 			}
+
 			handler.OnRoomChange(room)
 
 		case msg := <-room.broadcast:
+			room.history = append(room.history, msg)
+
+			data, err := json.Marshal(event.Event{
+				Type:   event.Msg,
+				Action: event.Receive,
+				Status: event.OK,
+				Data:   msg,
+			})
+
+			if err != nil {
+				log.Printf("error: %v", err)
+
+				break
+			}
+
 			for client := range room.clients {
-				client.Send(msg)
+				client.Send(data)
 			}
 		}
 	}

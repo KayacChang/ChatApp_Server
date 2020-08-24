@@ -34,13 +34,23 @@ const (
 	Update = "UPDATE"
 )
 
+// Status TODO
+type Status string
+
+const (
+	// OK TODO
+	OK Status = "OK"
+	// Error TODO
+	Error = "ERROR"
+)
+
 // Server TODO
 const Server = "SERVER"
 
 // Event TODO
 type Event struct {
-	Type    Type        `json:"type"`
-	Action  Action      `json:"action"`
-	From    string      `json:"from"`
-	Message interface{} `json:"message"`
+	Type   Type        `json:"type"`
+	Action Action      `json:"action"`
+	Status Status      `json:"status"`
+	Data   interface{} `json:"data"`
 }

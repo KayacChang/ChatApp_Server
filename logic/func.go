@@ -6,12 +6,18 @@ import (
 	"server/event"
 )
 
+type roomStatus struct {
+	Rooms Rooms `json:"rooms"`
+}
+
 func toRoomStatusData(rooms Rooms) *[]byte {
 	data, err := json.Marshal(event.Event{
-		Type:    event.Room,
-		Action:  event.Update,
-		From:    event.Server,
-		Message: rooms,
+		Type:   event.Room,
+		Action: event.Update,
+		Status: event.OK,
+		Data: roomStatus{
+			Rooms: rooms,
+		},
 	})
 	if err != nil {
 		log.Printf("error: %v", err)

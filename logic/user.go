@@ -4,17 +4,32 @@ import (
 	"encoding/json"
 	"log"
 	"server/event"
+	"time"
+
+	"github.com/google/uuid"
 )
 
-func (logic *Logic) onUserJoin(evt event.Event, client Client) {
-	client.ID = evt.From
+type userReq struct {
+	Name string `json:"username"`
+}
+
+type userResp struct {
+	Name    string `json:"username"`
+	Message string `json:"message"`
+}
+
+func (logic *Logic) onUserJoin(user userReq, client Client) {
+	client.ID = user.Name
 	logic.clients = append(logic.clients, client)
 
 	data, err := json.Marshal(event.Event{
-		Type:    event.User,
-		Action:  event.Join,
-		From:    event.Server,
-		Message: "User Join Success",
+		Type:   event.User,
+		Action: event.Join,
+		Status: event.OK,
+		Data: userResp{
+			Name:    client.ID,
+			Message: "User Join Success",
+		},
 	})
 
 	if err != nil {
@@ -28,14 +43,17 @@ func (logic *Logic) onUserJoin(evt event.Event, client Client) {
 	broadcastRoomStatus(Clients{client}, logic.rooms)
 }
 
-func (logic *Logic) onUserLeave(evt event.Event, client Client) {
+func (logic *Logic) onUserLeave(client Client) {
 	logic.OnClose(client)
 
 	data, err := json.Marshal(event.Event{
-		Type:    event.User,
-		Action:  event.Leave,
-		From:    event.Server,
-		Message: "User Leave Success",
+		Type:   event.User,
+		Action: event.Leave,
+		Status: event.OK,
+		Data: userResp{
+			Name:    client.ID,
+			Message: "User Leave Success",
+		},
 	})
 
 	if err != nil {
@@ -46,7 +64,12 @@ func (logic *Logic) onUserLeave(evt event.Event, client Client) {
 	client.Send(data)
 }
 
-func (logic *Logic) onUserSendMsg(evt event.Event, client Client) {
+type msgReq struct {
+	From    string `json:"from"`
+	Message string `json:"message"`
+}
+
+func (logic *Logic) onUserSendMsg(msg msgReq, client Client) {
 	room := findRoomByID(logic.rooms, client.RoomID)
 	if room == nil {
 		log.Printf("can not find room by id: %v", client.RoomID)
@@ -60,18 +83,10 @@ func (logic *Logic) onUserSendMsg(evt event.Event, client Client) {
 		return
 	}
 
-	bytes, err := json.Marshal(event.Event{
-		Type:    event.Msg,
-		Action:  event.Receive,
-		From:    evt.From,
-		Message: evt.Message,
+	room.Broadcast(Msg{
+		ID:      uuid.New().String(),
+		Name:    msg.From,
+		Message: msg.Message,
+		Time:    time.Now(),
 	})
-
-	if err != nil {
-		log.Printf("error: %v", err)
-
-		return
-	}
-
-	room.Broadcast(bytes)
 }
